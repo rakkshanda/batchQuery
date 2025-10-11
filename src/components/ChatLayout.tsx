@@ -22,7 +22,6 @@ export default function ChatLayout() {
   });
 
   const [dragActive, setDragActive] = useState(false);
-  const [dragDepth, setDragDepth] = useState(0);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -40,7 +39,6 @@ export default function ChatLayout() {
   useEffect(() => {
     function onDragEnter(e: DragEvent) {
       e.preventDefault();
-      setDragDepth((d) => d + 1);
       if (e.dataTransfer && e.dataTransfer.items && e.dataTransfer.items.length > 0) {
         setDragActive(true);
       }
@@ -54,19 +52,11 @@ export default function ChatLayout() {
     }
     function onDragLeave(e: DragEvent) {
       e.preventDefault();
-      setDragDepth((d) => {
-        const newDepth = d - 1;
-        if (newDepth <= 0) {
-          setDragActive(false);
-          return 0;
-        }
-        return newDepth;
-      });
+      setDragActive(false);
     }
     function onDrop(e: DragEvent) {
       e.preventDefault();
       setDragActive(false);
-      setDragDepth(0);
 
       const dt = e.dataTransfer;
       if (!dt) return;
@@ -167,7 +157,7 @@ export default function ChatLayout() {
         <div className="fixed inset-0 z-50 pointer-events-none">
           <div className="absolute inset-0 bg-black/10 dark:bg-white/5 backdrop-blur-[1px]" />
           <div className="absolute inset-0 flex items-center justify-center">
-            
+            <div className="text-[var(--text)] text-6xl font-light select-none pointer-events-none">+</div>
           </div>
         </div>
       )}

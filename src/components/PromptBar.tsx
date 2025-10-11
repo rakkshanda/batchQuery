@@ -1,7 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useChatStore } from '../state/chatStore';
-import { validateFiles, validatePrompt } from '../lib/validators';
+import { validateFiles } from '../lib/validators';
 import { analyzeBatch } from '../lib/api';
 
 export default function PromptBar() {

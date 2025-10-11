@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import ResponseGrid from './ResponseGrid';
 import type { Message } from '../state/chatStore';
 import { ClipboardIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
