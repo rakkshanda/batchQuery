@@ -52,6 +52,8 @@ type Store = {
   addAssistantPlaceholder: (files: UploadFile[]) => string;
   patchAssistantCard: (assistantId: string, cardIndex: number, patch: Partial<AssistantCard>) => void;
   addAssistantText: (text: string) => string;
+  removeLastAssistant: () => void;
+  replaceLastAssistantText: (text: string) => void;
 };
 
 const id = () => Math.random().toString(36).slice(2);
@@ -133,4 +135,37 @@ export const useChatStore = create<Store>((set, _get) => ({
     set((s) => ({ messages: [...s.messages, aMsg], busy: false }));
     return aMsg.id;
   },
+
+  removeLastAssistant: () =>
+    set((s) => {
+      const msgs = Array.isArray(s.messages) ? (s.messages as Message[]) : ([] as Message[]);
+      let idx = -1;
+      for (let i = msgs.length - 1; i >= 0; i--) {
+        const m = msgs[i];
+        if (m.role === 'assistant' && m.variant === 'assistant-text') {
+          idx = i;
+          break;
+        }
+      }
+      if (idx === -1) return { messages: msgs };
+      const next = msgs.slice() as Message[];
+      next.splice(idx, 1);
+      return { messages: next };
+    }),
+
+  replaceLastAssistantText: (text: string) =>
+    set((s) => {
+      const msgs = Array.isArray(s.messages) ? (s.messages as Message[]) : ([] as Message[]);
+      for (let i = msgs.length - 1; i >= 0; i--) {
+        const m = msgs[i];
+        if (m.role === 'assistant' && m.variant === 'assistant-text') {
+          const target = m as AssistantTextMessage;
+          const updated: AssistantTextMessage = { ...target, text };
+          const next = msgs.slice() as Message[];
+          next[i] = updated;
+          return { messages: next };
+        }
+      }
+      return { messages: msgs };
+    }),
 }));

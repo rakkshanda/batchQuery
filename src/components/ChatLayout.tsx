@@ -106,18 +106,15 @@ export default function ChatLayout() {
         <div className="flex items-center justify-between py-3 px-4">
           <h1 className="font-semibold">Rakshanda's BatchQuery</h1>
           <div className="flex items-center gap-3">
-            <label className="flex items-center gap-2 text-sm">
-              <span className="text-[var(--muted)]">Mode</span>
-              <select
-                value={mode}
-                onChange={(e) => setMode(e.target.value as 'mock' | 'live')}
-                className="rounded-md border px-2 py-1 text-sm bg-[var(--surface)] text-[var(--text)] border-black/10 dark:border-white/10 hover:bg-black/5 dark:hover:bg-white/10 transition"
-                disabled={busy}
-              >
-                <option value="mock">Test</option>
-                <option value="live">Live</option>
-              </select>
-            </label>
+            <button
+              onClick={() => setMode(mode === 'live' ? 'mock' : 'live')}
+              aria-pressed={mode === 'live'}
+              title="Toggle LLM mode"
+              className="text-sm rounded-md border px-3 py-1 transition bg-[var(--surface)] text-[var(--text)] border-black/10 dark:border-white/10 hover:bg-black/5 dark:hover:bg-white/10"
+              disabled={busy}
+            >
+              LLM: {mode === 'live' ? 'On' : 'Off'}
+            </button>
             <button
               onClick={() => setDark((d) => !d)}
               aria-pressed={dark}

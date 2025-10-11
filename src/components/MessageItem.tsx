@@ -2,6 +2,8 @@ import { useState } from 'react';
 import ResponseGrid from './ResponseGrid';
 import type { Message } from '../state/chatStore';
 import { ClipboardIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
+import { useChatStore } from '../state/chatStore';
+import { analyzeBatch } from '../lib/api';
 
 const hasText = (m: Message): m is Message & { text: string } =>
   typeof (m as any)?.text === 'string';
@@ -11,6 +13,8 @@ export default function MessageItem({ msg }: { msg: Message }) {
   const [copied, setCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const messageText = hasText(msg) ? msg.text : '';
+  const [displayText, setDisplayText] = useState(messageText);
+  const [saving, setSaving] = useState(false);
   const [editText, setEditText] = useState(messageText);
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
@@ -47,32 +51,53 @@ export default function MessageItem({ msg }: { msg: Message }) {
             <div className="flex justify-end space-x-2">
               <button
                 onClick={() => setIsEditing(false)}
-                className="text-xs px-2 py-1 rounded-md bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
+                disabled={saving}
+                className="text-xs px-2 py-1 rounded-md bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-60"
               >
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  console.log('Saved edited text:', editText);
+                onClick={async () => {
+                  if (saving) return;
+                  setSaving(true);
+                  setDisplayText(editText);
                   setIsEditing(false);
+                  try {
+                    const { mode, addAssistantText, removeLastAssistant, replaceLastAssistantText } = useChatStore.getState();
+                    // remove previous assistant reply
+                    removeLastAssistant();
+                    // show thinking placeholder
+                    addAssistantText('Thinking…');
+                    // re-run as text-only
+                    const res = await analyzeBatch(editText, [], mode);
+                    const answer = res[0]?.answer ?? 'No answer';
+                    // replace placeholder with final answer
+                    replaceLastAssistantText(answer);
+                  } catch (err: any) {
+                    const msg = err?.message || String(err);
+                    useChatStore.getState().replaceLastAssistantText(`Error: ${msg}`);
+                  } finally {
+                    setSaving(false);
+                  }
                 }}
-                className="text-xs px-2 py-1 rounded-md bg-blue-500 text-white hover:bg-blue-600"
+                disabled={saving}
+                className="text-xs px-2 py-1 rounded-md bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-60"
               >
-                Save
+                {saving ? 'Saving…' : 'Save'}
               </button>
             </div>
           </div>
         ) : msg.variant === 'assistant-batch' ? (
           <ResponseGrid cards={msg.cards} />
         ) : (
-          <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--text)]">{messageText}</p>
+          <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--text)]">{displayText}</p>
         )}
 
-        {isUser && !isEditing && (
+        {isUser && !isEditing && displayText.trim() && (
           <div className="absolute -bottom-5 right-0 hidden group-hover:flex space-x-2">
             <button
               onClick={() => {
-                navigator.clipboard.writeText(messageText || '');
+                navigator.clipboard.writeText(displayText || '');
                 setCopied(true);
                 setTimeout(() => setCopied(false), 1500);
               }}

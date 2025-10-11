@@ -201,10 +201,13 @@ export default function PromptBar() {
       <div className="flex items-center gap-2">
         <button
           onClick={onPickFiles}
-          className="rounded-xl border px-3 py-2 text-sm transition bg-[var(--surface)] text-[var(--text)] border-black/10 dark:border-white/10 hover:bg-black/5 dark:hover:bg-white/10"
+          className="group relative rounded-xl border px-3 py-2 text-sm transition
+                     bg-[var(--surface)] text-[var(--text)] border-black/10 dark:border-white/10
+                     hover:bg-black/5 dark:hover:bg-white/10 hover:scale-105 hover:shadow-md
+                     active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
           disabled={busy}
         >
-          + 
+          <span className="transition-transform duration-150 group-hover:rotate-90">+</span>
         </button>
         <input
           ref={fileInputRef}
@@ -229,8 +232,11 @@ export default function PromptBar() {
         />
         <button
           onClick={onSend}
-          disabled={busy}
-          className="rounded-full p-2 disabled:opacity-50 bg-[var(--text)] text-[var(--bg)] hover:opacity-90 transition flex items-center justify-center"
+          disabled={busy || (!prompt.trim() && uploads.length === 0)}
+          className={`group rounded-full p-2 transition flex items-center justify-center
+            bg-[var(--text)] text-[var(--bg)]
+            hover:opacity-90 enabled:group-hover:translate-x-0.5
+            disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:text-gray-200 disabled:opacity-70 disabled:pointer-events-none`}
           aria-label="Send message"
         >
           <svg
@@ -239,7 +245,7 @@ export default function PromptBar() {
             viewBox="0 0 24 24"
             strokeWidth={2}
             stroke="currentColor"
-            className="w-5 h-5"
+            className="w-5 h-5 transform transition-transform duration-150 group-enabled:group-hover:translate-x-0.5"
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14m-7-7l7 7-7 7" />
           </svg>
@@ -248,6 +254,16 @@ export default function PromptBar() {
       {errorMsg && (
         <div className="px-2 pt-2 text-xs text-rose-600 dark:text-rose-400">
           {errorMsg}
+        </div>
+      )}
+      {busy && !errorMsg && (
+        <div className="px-2 pt-2 text-xs text-[var(--muted)]" aria-live="polite" aria-atomic="true">
+          <span className="inline-flex items-center gap-2">
+            <span className="relative inline-block w-3 h-3">
+              <span className="absolute inset-0 rounded-full border-2 border-[var(--text)]/30 border-t-transparent animate-spin" />
+            </span>
+            <span>Analyzing…</span>
+          </span>
         </div>
       )}
       {preview &&
