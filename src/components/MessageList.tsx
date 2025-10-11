@@ -6,7 +6,7 @@ export default function MessageList() {
   if (messages.length === 0) {
     return (
       <div className="text-center py-16 text-[var(--muted)]">
-        Drop up to 4 product images, ask a single question, and I’ll analyze each image in parallel.
+       Hi, I am your virtual assistant, let me know if you need help with anything! 
       </div>
     );
   }

@@ -49,6 +49,7 @@ type Store = {
   sendStart: (prompt: string, files: UploadFile[]) => string;
   addAssistantPlaceholder: (files: UploadFile[]) => string;
   patchAssistantCard: (assistantId: string, cardIndex: number, patch: Partial<AssistantCard>) => void;
+  addAssistantText: (text: string) => string;
 };
 
 const id = () => Math.random().toString(36).slice(2);
@@ -109,5 +110,17 @@ export const useChatStore = create<Store>((set, _get) => ({
       const done = assistant?.cards?.every((c) => c.status !== 'loading');
       return { messages: msgs, busy: done ? false : s.busy };
     });
+  },
+
+  addAssistantText: (text: string) => {
+    const aMsg: AssistantTextMessage = {
+      id: id(),
+      role: 'assistant',
+      createdAt: Date.now(),
+      variant: 'assistant-text',
+      text,
+    };
+    set((s) => ({ messages: [...s.messages, aMsg], busy: false }));
+    return aMsg.id;
   },
 }));

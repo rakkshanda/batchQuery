@@ -45,9 +45,18 @@ export default async function handler(req: Request): Promise<Response> {
     console.log('Images received:', images.length);
 
     if (images.length === 0) {
-      return new Response(JSON.stringify([{ answer: 'No images received by server' }]), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
+      console.log("📝 Text-only request");
+      const res = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        temperature: 0.2,
+        messages: [
+          { role: "system", content: "You are a concise, helpful assistant for e-commerce QA chats. Keep answers to 1–3 sentences." },
+          { role: "user", content: prompt }
+        ],
+      });
+      const text = res.choices[0].message?.content?.trim() || "No response";
+      return new Response(JSON.stringify([{ answer: text }]), {
+        headers: { "Content-Type": "application/json" },
       });
     }
 

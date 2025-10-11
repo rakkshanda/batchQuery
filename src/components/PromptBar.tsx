@@ -32,10 +32,24 @@ export default function PromptBar() {
     if (!vp.ok) return alert(vp.message);
     if (!vf.ok) return alert(vf.message);
 
-sendStart(prompt, uploads);
-    const assistantId = addAssistantPlaceholder(uploads); // empty cards
+    sendStart(prompt, uploads);
 
-    // kick off per-image analysis
+    // if no images, handle text-only chat
+    if (uploads.length === 0) {
+      try {
+        const res = await analyzeBatch(prompt, [], mode);
+        const text = res[0]?.answer ?? 'No answer';
+        useChatStore.getState().addAssistantText(text);
+        setPrompt('');
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        useChatStore.getState().addAssistantText(`Error: ${msg}`);
+      }
+      return;
+    }
+
+    // existing multi-image flow
+    const assistantId = addAssistantPlaceholder(uploads);
     const startedAt = performance.now();
     const runners = uploads.map((file, i) =>
       analyzeBatch(prompt, [file], mode)
@@ -46,8 +60,12 @@ sendStart(prompt, uploads);
         })
         .catch((err) => {
           const elapsed = Math.round(performance.now() - startedAt);
-          patchAssistantCard(assistantId, i, { status: 'error', text: String(err?.message || err), elapsedMs: elapsed });
-        }),
+          patchAssistantCard(assistantId, i, {
+            status: 'error',
+            text: String(err?.message || err),
+            elapsedMs: elapsed,
+          });
+        })
     );
 
     await Promise.allSettled(runners);

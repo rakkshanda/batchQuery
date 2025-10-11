@@ -27,6 +27,8 @@ export default function MessageItem({ msg }: { msg: Message }) {
         {/* text or responses */}
         {msg.variant === 'assistant-batch' ? (
           <ResponseGrid cards={msg.cards} />
+        ) : msg.variant === 'assistant-text' ? (
+          <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-800">{msg.text}</p>
         ) : (
           <p className="whitespace-pre-wrap text-sm leading-relaxed">{msg.text}</p>
         )}
