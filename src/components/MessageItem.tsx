@@ -3,11 +3,15 @@ import ResponseGrid from './ResponseGrid';
 import type { Message } from '../state/chatStore';
 import { ClipboardIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
 
+const hasText = (m: Message): m is Message & { text: string } =>
+  typeof (m as any)?.text === 'string';
+
 export default function MessageItem({ msg }: { msg: Message }) {
   const isUser = msg.role === 'user';
   const [copied, setCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [editText, setEditText] = useState(msg.text || '');
+  const messageText = hasText(msg) ? msg.text : '';
+  const [editText, setEditText] = useState(messageText);
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div
@@ -61,14 +65,14 @@ export default function MessageItem({ msg }: { msg: Message }) {
         ) : msg.variant === 'assistant-batch' ? (
           <ResponseGrid cards={msg.cards} />
         ) : (
-          <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--text)]">{msg.text}</p>
+          <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--text)]">{messageText}</p>
         )}
 
         {isUser && !isEditing && (
           <div className="absolute -bottom-5 right-0 hidden group-hover:flex space-x-2">
             <button
               onClick={() => {
-                navigator.clipboard.writeText(msg.text || '');
+                navigator.clipboard.writeText(messageText || '');
                 setCopied(true);
                 setTimeout(() => setCopied(false), 1500);
               }}
