@@ -32,7 +32,7 @@ export default function PromptBar() {
     if (!vp.ok) return alert(vp.message);
     if (!vf.ok) return alert(vf.message);
 
-    const userId = sendStart(prompt, uploads); // creates user message
+sendStart(prompt, uploads);
     const assistantId = addAssistantPlaceholder(uploads); // empty cards
 
     // kick off per-image analysis

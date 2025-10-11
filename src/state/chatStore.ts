@@ -53,7 +53,7 @@ type Store = {
 
 const id = () => Math.random().toString(36).slice(2);
 
-export const useChatStore = create<Store>((set, get) => ({
+export const useChatStore = create<Store>((set, _get) => ({
   messages: [],
   uploads: [],
   mode: 'mock',
