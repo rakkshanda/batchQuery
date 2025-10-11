@@ -31,7 +31,7 @@ export async function analyzeBatch(
   // ---- LIVE: call OpenAI Vision API here ----
   const formData = new FormData();
   formData.append('prompt', prompt);
-  files.forEach((file, i) => {
+  files.forEach((file) => {
     formData.append('files', file);
   });
   const response = await fetch('/api/analyze', {
@@ -49,22 +49,4 @@ function mockAnswer(prompt: string, i: number) {
     return `${n}`;
   }
   return pick(i);
-}
-
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result;
-      if (typeof result === 'string') {
-        // strip prefix 'data:*/*;base64,' if present
-        const base64 = result.split(',')[1] ?? result;
-        resolve(base64);
-      } else {
-        reject(new Error('Failed to read file as base64 string'));
-      }
-    };
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
 }
