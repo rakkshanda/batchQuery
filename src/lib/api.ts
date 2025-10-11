@@ -28,18 +28,18 @@ export async function analyzeBatch(
     await sleep(500 + Math.random() * 600);
     return files.map((_, i) => ({ answer: mockAnswer(prompt, i) }));
   }
-  // ---- LIVE (stub): call your backend or OpenAI here ----
-  // Example (backend route):
-  // const form = new FormData();
-  // form.set('prompt', prompt);
-  // files.forEach((f, i) => form.set(`image_${i}`, f));
-  // const res = await fetch('/api/analyze', { method: 'POST', body: form });
-  // if (!res.ok) throw new Error(await res.text());
-  // return await res.json();
-
-  // For now, fallback to mock to keep UX flowing:
-  await sleep(400);
-  return files.map((_, i) => ({ answer: `[LIVE placeholder] ${mockAnswer(prompt, i)}` }));
+  // ---- LIVE: call OpenAI Vision API here ----
+  const formData = new FormData();
+  formData.append('prompt', prompt);
+  files.forEach((file, i) => {
+    formData.append('files', file);
+  });
+  const response = await fetch('/api/analyze', {
+    method: 'POST',
+    body: formData,
+  });
+  const results: AnalyzeResult[] = await response.json();
+  return results;
 }
 
 function mockAnswer(prompt: string, i: number) {
@@ -49,4 +49,22 @@ function mockAnswer(prompt: string, i: number) {
     return `${n}`;
   }
   return pick(i);
+}
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result === 'string') {
+        // strip prefix 'data:*/*;base64,' if present
+        const base64 = result.split(',')[1] ?? result;
+        resolve(base64);
+      } else {
+        reject(new Error('Failed to read file as base64 string'));
+      }
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
 }
