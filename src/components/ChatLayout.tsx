@@ -19,7 +19,7 @@ export default function ChatLayout() {
       {/* top bar */}
       <header className="sticky top-0 z-10 bg-[var(--bg)]/70 backdrop-blur border-b border-black/5">
         <div className="flex items-center justify-between py-3 px-4">
-          <h1 className="font-semibold">Rakshand's BatchQuery</h1>
+          <h1 className="font-semibold">Rakshanda's BatchQuery</h1>
           <div className="flex items-center gap-3">
             <label className="flex items-center gap-2 text-sm">
               <span className="text-[var(--muted)]">Mode</span>
