@@ -11,7 +11,7 @@ export default function MessageList() {
     );
   }
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 bg-[var(--background)] text-[var(--foreground)]">
       {messages.map((m) => (
         <MessageItem key={m.id} msg={m} />
       ))}

@@ -7,6 +7,13 @@
   --muted:#6b7280;
   --radius:16px;
 }
+.dark {
+  --bg: #0b1020;       
+  --surface: #0f172a;  
+  --text: #e5e7eb;    
+  --muted: #9ca3af;    
+}
 
 html,body,#root{height:100%}
+body{background:var(--bg);color:var(--text)}
 body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}

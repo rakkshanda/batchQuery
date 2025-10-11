@@ -43,7 +43,9 @@ type Store = {
   busy: boolean;
 
   setMode: (m: 'mock' | 'live') => void;
-  setUploads: (f: UploadFile[]) => void;
+  setUploads: (f: UploadFile[] | ((prev: UploadFile[]) => UploadFile[])) => void;
+  removeUpload: (index: number) => void;
+  clearUploads: () => void;
   clearChat: () => void;
 
   sendStart: (prompt: string, files: UploadFile[]) => string;
@@ -61,7 +63,15 @@ export const useChatStore = create<Store>((set, _get) => ({
   busy: false,
 
   setMode: (m) => set({ mode: m }),
-  setUploads: (f) => set({ uploads: f }),
+  setUploads: (f) =>
+    set((s) => ({
+      uploads: typeof f === 'function' ? (f as (prev: UploadFile[]) => UploadFile[])(s.uploads) : f,
+    })),
+  removeUpload: (index) =>
+    set((s) => ({
+      uploads: s.uploads.filter((_, i) => i !== index),
+    })),
+  clearUploads: () => set({ uploads: [] }),
   clearChat: () => set({ messages: [] }),
 
   sendStart: (prompt, files) => {
