@@ -5,7 +5,7 @@ import { validateFiles } from '../lib/validators';
 import { analyzeBatch } from '../lib/api';
 
 export default function PromptBar() {
-  const { uploads, setUploads, removeUpload, sendStart, addAssistantPlaceholder, patchAssistantCard, busy, mode } =
+  const { uploads, setUploads, removeUpload, sendStart, addAssistantPlaceholder, patchAssistantCard, busy, mode, setIsTyping } =
     useChatStore();
   const [prompt, setPrompt] = useState('');
   const [dragActive, setDragActive] = useState(false);
@@ -95,15 +95,24 @@ export default function PromptBar() {
     }
 
     setErrorMsg('');
-    sendStart(prompt, uploads);
-
+    
+    // Scroll down immediately when send is pressed
+    setTimeout(() => {
+      const chatContainer = document.querySelector('[data-chat-scroll]');
+      if (chatContainer) {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }
+    }, 50);
+    
     // if no images, handle text-only chat
     if (uploads.length === 0) {
       if (!prompt.trim()) {
         setErrorMsg('Type a question or add at least one image.');
         return;
       }
+      sendStart(prompt, uploads);
       try {
+        setIsTyping(true);
         const res = await analyzeBatch(prompt, [], mode);
         const text = res[0]?.answer ?? 'No answer';
         useChatStore.getState().addAssistantText(text);
@@ -115,28 +124,47 @@ export default function PromptBar() {
       return;
     }
 
-    // existing multi-image flow
+    // for images, use optimized single API call
+    sendStart(prompt, uploads);
+
+    // optimized single API call for all images
     const assistantId = addAssistantPlaceholder(uploads);
     const startedAt = performance.now();
     const promptToUse = (prompt && prompt.trim()) || 'Provide a concise, checklist-style quality check for this product image (defects, guideline issues, presentation problems).';
-    const runners = uploads.map((file, i) =>
-      analyzeBatch(promptToUse, [file], mode)
-        .then((res) => {
-          const elapsed = Math.round(performance.now() - startedAt);
-          const text = res[0]?.answer ?? 'No answer';
-          patchAssistantCard(assistantId, i, { status: 'done', text, elapsedMs: elapsed });
-        })
-        .catch((err) => {
-          const elapsed = Math.round(performance.now() - startedAt);
-          patchAssistantCard(assistantId, i, {
-            status: 'error',
-            text: String(err?.message || err),
-            elapsedMs: elapsed,
-          });
-        })
-    );
+    
+    try {
+      // Send all images in one API call
+      console.log(`🚀 Making 1 API call for ${uploads.length} images`);
+      console.log('📤 Sending to backend:', { prompt: promptToUse, imageCount: uploads.length });
+      
+      const results = await analyzeBatch(promptToUse, uploads, mode);
+      const elapsed = Math.round(performance.now() - startedAt);
+      
+      console.log(`✅ Received ${results.length} responses in ${elapsed}ms`);
+      console.log('📥 Results:', results);
+      
+      // Update each card with its corresponding result
+      results.forEach((result, i) => {
+        patchAssistantCard(assistantId, i, { 
+          status: 'done', 
+          text: result.answer, 
+          elapsedMs: elapsed 
+        });
+      });
+    } catch (err) {
+      const elapsed = Math.round(performance.now() - startedAt);
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      
+      // Mark all cards as error
+      uploads.forEach((_, i) => {
+        patchAssistantCard(assistantId, i, {
+          status: 'error',
+          text: errorMsg,
+          elapsedMs: elapsed,
+        });
+      });
+    }
 
-    await Promise.allSettled(runners);
     setPrompt('');
     setUploads([]);
   };
@@ -144,8 +172,8 @@ export default function PromptBar() {
   return (
     <div
       className={
-        "relative rounded-2xl bg-[var(--surface)] shadow-soft p-2 border transition " +
-        (dragActive ? "border-blue-400 ring-2 ring-blue-500 dark:border-blue-300 " : "border-black/10 dark:border-white/10")
+        "relative rounded-xl bg-[var(--surface)] shadow-sm p-3 border-2 transition " +
+        (dragActive ? "border-blue-500 ring-2 ring-blue-500 dark:border-blue-400 " : "border-blue-300 dark:border-blue-400")
       }
       onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(true); }}
       onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'; }}
@@ -198,13 +226,13 @@ export default function PromptBar() {
       )}
 
       {/* composer row */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3 px-2">
         <button
           onClick={onPickFiles}
-          className="group relative rounded-xl border px-3 py-2 text-sm transition
-                     bg-[var(--surface)] text-[var(--text)] border-black/10 dark:border-white/10
-                     hover:bg-black/5 dark:hover:bg-white/10 hover:scale-105 hover:shadow-md
-                     active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
+          className={`group rounded-full p-2 transition flex items-center justify-center
+            bg-[var(--text)] text-[var(--bg)]
+            hover:opacity-90 enabled:group-hover:translate-x-0.5
+            disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:text-gray-200 disabled:opacity-70 disabled:pointer-events-none`}
           disabled={busy}
         >
           <span className="transition-transform duration-150 group-hover:rotate-90">+</span>
@@ -221,7 +249,7 @@ export default function PromptBar() {
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           placeholder="Ask anything…"
-          className="flex-1 rounded-xl border px-3 py-2 text-sm outline-none bg-[var(--surface)] text-[var(--text)] placeholder-[var(--muted)] border-black/10 dark:border-white/10 focus:border-black/20 dark:focus:border-white/20"
+          className="flex-1 rounded-lg border px-3 py-2 text-sm outline-none bg-[var(--surface)] text-[var(--text)] placeholder-[var(--muted)] border-gray-200 dark:border-white/10 focus:border-gray-300 dark:focus:border-white/20 focus:ring-1 focus:ring-gray-200 dark:focus:ring-white/10"
           disabled={busy}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -254,16 +282,6 @@ export default function PromptBar() {
       {errorMsg && (
         <div className="px-2 pt-2 text-xs text-rose-600 dark:text-rose-400">
           {errorMsg}
-        </div>
-      )}
-      {busy && !errorMsg && (
-        <div className="px-2 pt-2 text-xs text-[var(--muted)]" aria-live="polite" aria-atomic="true">
-          <span className="inline-flex items-center gap-2">
-            <span className="relative inline-block w-3 h-3">
-              <span className="absolute inset-0 rounded-full border-2 border-[var(--text)]/30 border-t-transparent animate-spin" />
-            </span>
-            <span>Analyzing…</span>
-          </span>
         </div>
       )}
       {preview &&

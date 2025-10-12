@@ -105,6 +105,9 @@ export default async function handler(req: Request): Promise<Response> {
       if (!Array.isArray(parsed) || parsed.length !== images.length) {
         throw new Error("JSON structure mismatch");
       }
+      
+      // Sort by index to ensure correct order
+      parsed.sort((a, b) => a.index - b.index);
     } catch (e) {
       console.error("⚠️ Failed to parse JSON, returning fallback answers", e);
       parsed = images.map((_, i) => ({
@@ -114,7 +117,7 @@ export default async function handler(req: Request): Promise<Response> {
     }
 
     const answers = parsed.map((p) => ({ answer: p.answer }));
-    console.log("✅ Returning all answers");
+    console.log("✅ Returning all answers in correct order");
     return new Response(JSON.stringify(answers), {
       headers: { "Content-Type": "application/json" },
     });

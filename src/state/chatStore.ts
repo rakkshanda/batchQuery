@@ -41,12 +41,14 @@ type Store = {
   uploads: UploadFile[];
   mode: 'mock' | 'live';
   busy: boolean;
+  isTyping: boolean;
 
   setMode: (m: 'mock' | 'live') => void;
   setUploads: (f: UploadFile[] | ((prev: UploadFile[]) => UploadFile[])) => void;
   removeUpload: (index: number) => void;
   clearUploads: () => void;
   clearChat: () => void;
+  setIsTyping: (typing: boolean) => void;
 
   sendStart: (prompt: string, files: UploadFile[]) => string;
   addAssistantPlaceholder: (files: UploadFile[]) => string;
@@ -61,8 +63,9 @@ const id = () => Math.random().toString(36).slice(2);
 export const useChatStore = create<Store>((set, _get) => ({
   messages: [],
   uploads: [],
-  mode: 'mock',
+  mode: 'live',
   busy: false,
+  isTyping: false,
 
   setMode: (m) => set({ mode: m }),
   setUploads: (f) =>
@@ -75,6 +78,7 @@ export const useChatStore = create<Store>((set, _get) => ({
     })),
   clearUploads: () => set({ uploads: [] }),
   clearChat: () => set({ messages: [] }),
+  setIsTyping: (typing) => set({ isTyping: typing }),
 
   sendStart: (prompt, files) => {
     const userMsg: UserMessage = {
@@ -85,7 +89,9 @@ export const useChatStore = create<Store>((set, _get) => ({
       attachments: files.map((f) => ({ previewUrl: URL.createObjectURL(f) })),
       variant: 'user',
     };
-    set((s) => ({ messages: [...s.messages, userMsg], busy: true }));
+    // Only show typing for text-only messages (no files)
+    const showTyping = files.length === 0;
+    set((s) => ({ messages: [...s.messages, userMsg], busy: true, isTyping: showTyping }));
     return userMsg.id;
   },
 
@@ -132,7 +138,16 @@ export const useChatStore = create<Store>((set, _get) => ({
       variant: 'assistant-text',
       text,
     };
-    set((s) => ({ messages: [...s.messages, aMsg], busy: false }));
+    set((s) => ({ messages: [...s.messages, aMsg], busy: false, isTyping: false }));
+    
+    // Scroll down when response is added
+    setTimeout(() => {
+      const chatContainer = document.querySelector('[data-chat-scroll]');
+      if (chatContainer) {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }
+    }, 100);
+    
     return aMsg.id;
   },
 

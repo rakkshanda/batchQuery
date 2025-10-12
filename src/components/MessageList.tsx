@@ -1,8 +1,9 @@
 import { useChatStore } from '../state/chatStore';
 import MessageItem from './MessageItem';
+import TypingIndicator from './TypingIndicator';
 
 export default function MessageList() {
-  const { messages } = useChatStore();
+  const { messages, isTyping } = useChatStore();
   if (messages.length === 0) {
     return (
       <div className="text-center py-16 text-[var(--muted)]">
@@ -15,6 +16,7 @@ export default function MessageList() {
       {messages.map((m) => (
         <MessageItem key={m.id} msg={m} />
       ))}
+      {isTyping && <TypingIndicator />}
     </div>
   );
 }

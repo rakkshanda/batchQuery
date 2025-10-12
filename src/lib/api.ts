@@ -23,22 +23,30 @@ export async function analyzeBatch(
   files: File[],
   mode: 'mock' | 'live',
 ): Promise<AnalyzeResult[]> {
+  console.log(`🔍 analyzeBatch called: ${files.length} files, mode: ${mode}`);
+  
   if (mode === 'mock') {
     // simulate staggered finishes
     await sleep(500 + Math.random() * 600);
     return files.map((_, i) => ({ answer: mockAnswer(prompt, i) }));
   }
+  
   // ---- LIVE: call OpenAI Vision API here ----
+  console.log('🌐 Making API call to /api/analyze');
   const formData = new FormData();
   formData.append('prompt', prompt);
   files.forEach((file) => {
     formData.append('files', file);
   });
+  
   const response = await fetch('/api/analyze', {
     method: 'POST',
     body: formData,
   });
+  
+  console.log('📡 API response status:', response.status);
   const results: AnalyzeResult[] = await response.json();
+  console.log('📋 API results:', results);
   return results;
 }
 

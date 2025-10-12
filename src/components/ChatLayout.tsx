@@ -5,7 +5,7 @@ import { useChatStore } from '../state/chatStore';
 import { validateFiles } from '../lib/validators';
 
 export default function ChatLayout() {
-  const { messages, clearChat, mode, setMode, busy, uploads, setUploads } = useChatStore();
+  const { messages, clearChat, mode, setMode, busy, uploads, setUploads, isTyping } = useChatStore();
   const scrollerRef = useRef<HTMLDivElement>(null);
 
   const [dark, setDark] = useState(() => {
@@ -29,12 +29,20 @@ export default function ChatLayout() {
     try { localStorage.setItem('theme', dark ? 'dark' : 'light'); } catch {}
   }, [dark]);
 
-  // autoscroll to bottom when messages change
+  // autoscroll to bottom when messages change or typing state changes
   useEffect(() => {
     const el = scrollerRef.current;
     if (!el) return;
-    el.scrollTop = el.scrollHeight;
-  }, [messages]);
+    
+    const scrollToBottom = () => {
+      el.scrollTop = el.scrollHeight;
+      // Also try scrolling to the very bottom
+      el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+    };
+    
+    // Use requestAnimationFrame to ensure DOM has updated
+    requestAnimationFrame(scrollToBottom);
+  }, [messages, isTyping]);
 
   useEffect(() => {
     function onDragEnter(e: DragEvent) {
@@ -100,7 +108,7 @@ export default function ChatLayout() {
   }, [uploads, setUploads]);
 
   return (
-    <div className="mx-auto max-w-[760px] min-h-screen flex flex-col text-[var(--text)] bg-[var(--bg)]">
+    <div className={`mx-auto max-w-[760px] min-h-screen flex flex-col text-[var(--text)] ${dark ? 'bg-[#1b1b1e]' : 'bg-white'} shadow-lg`}>
       {/* top bar */}
       <header className="sticky top-0 z-10 bg-[var(--surface)]/70 backdrop-blur border-b border-black/10 dark:border-white/10">
         <div className="flex items-center justify-between py-3 px-4">
@@ -110,10 +118,14 @@ export default function ChatLayout() {
               onClick={() => setMode(mode === 'live' ? 'mock' : 'live')}
               aria-pressed={mode === 'live'}
               title="Toggle LLM mode"
-              className="text-sm rounded-md border px-3 py-1 transition bg-[var(--surface)] text-[var(--text)] border-black/10 dark:border-white/10 hover:bg-black/5 dark:hover:bg-white/10"
+              className={`text-sm rounded-md border px-3 py-1 transition ${
+                mode === 'live' 
+                  ? 'bg-green-500 text-white border-green-500 hover:bg-green-600' 
+                  : 'bg-[var(--surface)] text-[var(--text)] border-black/10 dark:border-white/10 hover:bg-black/5 dark:hover:bg-white/10'
+              }`}
               disabled={busy}
             >
-              LLM: {mode === 'live' ? 'On' : 'Off'}
+              LLM {mode === 'live' ? 'On' : 'Off'}
             </button>
             <button
               onClick={() => setDark((d) => !d)}
@@ -121,7 +133,7 @@ export default function ChatLayout() {
               title="Toggle dark mode"
               className="text-sm rounded-md border px-3 py-1 transition bg-[var(--surface)] text-[var(--text)] border-black/10 dark:border-white/10 hover:bg-black/5 dark:hover:bg-white/10"
             >
-              Dark Mode: {dark ? 'On' : 'Off'}
+              Dark Mode {dark ? 'On' : 'Off'}
             </button>
             <button
               onClick={clearChat}
@@ -137,16 +149,17 @@ export default function ChatLayout() {
       {/* messages */}
       <div
         ref={scrollerRef}
+        data-chat-scroll
         className="flex-1 overflow-y-auto px-4 py-4"
         aria-live="polite"
       >
-        <div className="bg-[var(--surface)] shadow-sm rounded-2xl p-4">
+        <div className="bg-transparent p-4">
           <MessageList />
         </div>
       </div>
 
       {/* composer */}
-      <footer className="sticky bottom-0 bg-[var(--bg)]/70 backdrop-blur px-4 pb-4">
+      <footer className={`sticky bottom-0 backdrop-blur px-4 pb-4 ${dark ? 'bg-[#1b1b1e]/95' : 'bg-white/95'}`}>
         <PromptBar />
       </footer>
 

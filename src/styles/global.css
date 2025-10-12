@@ -1,11 +1,11 @@
 @import "tailwindcss";
 
 :root {
-  --bg:#fafafa;
+  --bg:#e5e7eb;
   --surface:#ffffff;
   --text:#111827;
   --muted:#6b7280;
-  --radius:16px;
+  --radius:12px;
 }
 .dark {
   --bg: #0b1020;       
@@ -17,3 +17,13 @@
 html,body,#root{height:100%}
 body{background:var(--bg);color:var(--text)}
 body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+
+/* Custom cursor flicker animation */
+@keyframes cursor-flicker {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.cursor-flicker {
+  animation: cursor-flicker 1s infinite;
+}
