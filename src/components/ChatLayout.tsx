@@ -55,20 +55,22 @@ export default function ChatLayout() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showSettingsDropdown]);
 
-  // autoscroll to bottom when messages change or typing state changes
+  // autoscroll to top when messages change or typing state changes
   useEffect(() => {
     const el = scrollerRef.current;
     if (!el) return;
     
-    const scrollToBottom = () => {
-      el.scrollTop = el.scrollHeight;
-      // Also try scrolling to the very bottom
-      el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+    const scrollToTop = () => {
+      // Scroll to the very top
+      el.scrollTo({ top: 0, behavior: 'smooth' });
     };
     
     // Use requestAnimationFrame to ensure DOM has updated
-    requestAnimationFrame(scrollToBottom);
-  }, [messages, isTyping]);
+    requestAnimationFrame(scrollToTop);
+    
+    // Also try after a short delay to ensure content is rendered
+    setTimeout(scrollToTop, 100);
+  }, [messages.length, isTyping]);
 
   useEffect(() => {
     function onDragEnter(e: DragEvent) {
@@ -136,9 +138,13 @@ export default function ChatLayout() {
   return (
     <>
       {showWelcome ? (
-        <WelcomeScreen onStartChat={() => setShowWelcome(false)} />
+        <WelcomeScreen onStartChat={() => {
+          setShowWelcome(false);
+          // Clear uploads when transitioning to chat window
+          useChatStore.getState().setUploads([]);
+        }} />
       ) : (
-        <div className="mx-auto max-w-[760px] min-h-screen flex flex-col text-white shadow-lg" style={{ backgroundColor: 'var(--bg)' }}>
+        <div className="mx-auto max-w-[760px] min-h-screen flex flex-col text-white bg-gray-900">
       {/* top bar */}
       {headerVisible && (
         <header className="sticky top-0 z-10 bg-gray-800/70 backdrop-blur border-b border-gray-700">
@@ -270,13 +276,13 @@ export default function ChatLayout() {
         className="flex-1 overflow-y-auto px-4 py-4"
         aria-live="polite"
       >
-        <div className="p-4" style={{ backgroundColor: 'var(--bg)' }}>
+        <div className="p-4 bg-gray-900">
           <MessageList />
         </div>
       </div>
 
       {/* composer */}
-      <footer className="sticky bottom-0 backdrop-blur px-4 pb-4 bg-gray-900/95">
+      <footer className="sticky bottom-0 backdrop-blur px-4 pb-4 bg-gray-900">
         <PromptBar />
       </footer>
 

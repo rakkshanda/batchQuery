@@ -83,15 +83,19 @@ export default function WelcomeScreen({ onStartChat }: WelcomeScreenProps) {
     // Clear the input and uploads immediately when send is pressed
     const currentPrompt = prompt;
     const currentUploads = [...uploads];
+    
+    // Force immediate cleanup of UI - clear both states
     setPrompt('');
     setUploads([]);
+    
+    // Force a re-render to ensure UI updates immediately
+    await new Promise(resolve => requestAnimationFrame(resolve));
     
     // Send the message and transition to chat
     const { sendStart, setUploads: setStoreUploads, mode, setIsTyping, addAssistantPlaceholder, patchAssistantCard, setPendingImages } = useChatStore.getState();
     setStoreUploads(currentUploads); // Set uploads in store before transitioning
-    onStartChat(); // Transition to chat interface
     
-    // Process the message to get a response
+    // Send the user message first, then transition
     if (currentUploads.length > 0) {
       // Check if only images are sent without text
       if (!currentPrompt.trim()) {
@@ -148,6 +152,7 @@ export default function WelcomeScreen({ onStartChat }: WelcomeScreenProps) {
       }
     } else {
       // Handle text-only messages
+      sendStart(currentPrompt, []);
       try {
         setIsTyping(true);
         const results = await analyzeBatch(currentPrompt.trim(), [], mode);
@@ -158,6 +163,9 @@ export default function WelcomeScreen({ onStartChat }: WelcomeScreenProps) {
         useChatStore.getState().addAssistantText(`Error: ${errorMsg}`);
       }
     }
+    
+    // Transition to chat interface after sending the message
+    onStartChat();
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
@@ -184,7 +192,7 @@ export default function WelcomeScreen({ onStartChat }: WelcomeScreenProps) {
             className={`rounded-xl border border-gray-700 p-4 transition ${
               dragActive ? "border-blue-500 ring-2 ring-blue-500" : ""
             }`}
-            style={{ backgroundColor: 'var(--bg)' }}
+            style={{ backgroundColor: '#0b1020' }}
             onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(true); }}
             onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'; }}
             onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(false); }}
@@ -226,7 +234,7 @@ export default function WelcomeScreen({ onStartChat }: WelcomeScreenProps) {
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder="How can I help you today?"
                 className="w-full rounded-lg px-3 py-2 text-sm outline-none text-white placeholder-gray-400 focus:outline-none resize-none"
-                style={{ backgroundColor: 'var(--bg)', height: '33px' }}
+                style={{ backgroundColor: '#0b1020', height: '33px' }}
                 onKeyDown={onKeyDown}
               />
             </div>

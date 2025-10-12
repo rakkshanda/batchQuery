@@ -19,11 +19,12 @@ export default function MessageItem({ msg }: { msg: Message }) {
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div
-        className={`relative group max-w-[85%] rounded-2xl p-3 shadow-soft border border-black/10 dark:border-white/10 ${
+        className={`relative group max-w-[85%] rounded-2xl p-3 shadow-soft ${
           isUser
-            ? 'bg-[var(--surface)] text-[var(--text)]'
+            ? 'text-white border border-black/10 dark:border-white/10'
             : 'bg-[var(--surface)] text-[var(--text)]'
         }`}
+        style={isUser ? { backgroundColor: '#0b1020' } : {}}
       >
         {/* attachments (for user) */}
         {isUser && msg.attachments?.length > 0 && (
@@ -33,7 +34,7 @@ export default function MessageItem({ msg }: { msg: Message }) {
                 key={i}
                 src={a.previewUrl}
                 alt={`attachment-${i}`}
-                className="w-full h-40 object-cover rounded-xl border border-black/10 dark:border-white/10"
+                className="w-full h-24 object-cover rounded-xl border border-black/10 dark:border-white/10"
               />
             ))}
           </div>

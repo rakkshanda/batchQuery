@@ -66,7 +66,7 @@ export const useChatStore = create<Store>((set, _get) => ({
   messages: [],
   uploads: [],
   pendingImages: null,
-  mode: 'live',
+  mode: 'mock',
   busy: false,
   isTyping: false,
 

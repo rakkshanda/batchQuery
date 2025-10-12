@@ -5,7 +5,7 @@ import { validateFiles } from '../lib/validators';
 import { analyzeBatch } from '../lib/api';
 
 export default function PromptBar() {
-  const { uploads, setUploads, removeUpload, sendStart, addAssistantPlaceholder, patchAssistantCard, busy, mode, setIsTyping, pendingImages, setPendingImages } =
+  const { uploads, setUploads, removeUpload, sendStart, addAssistantPlaceholder, patchAssistantCard, busy, mode, setIsTyping, pendingImages, setPendingImages, messages } =
     useChatStore();
   const [prompt, setPrompt] = useState('');
   const [dragActive, setDragActive] = useState(false);
@@ -13,6 +13,20 @@ export default function PromptBar() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [preview, setPreview] = useState<{ url: string; name: string } | null>(null);
+  const [resetKey, setResetKey] = useState(0);
+
+  // Always start with clean state when PromptBar mounts
+  useEffect(() => {
+    setPrompt('');
+    setUploads([]);
+  }, []);
+
+  // Reset whenever uploads change (from external sources)
+  useEffect(() => {
+    if (uploads.length === 0) {
+      setPrompt('');
+    }
+  }, [uploads.length]);
 
   const formatBytes = (bytes: number) => {
     if (!Number.isFinite(bytes)) return '0 B';
@@ -101,27 +115,46 @@ export default function PromptBar() {
 
     setErrorMsg('');
     
-    // Scroll down immediately when send is pressed
+    // Clear the input and uploads immediately when send is pressed
+    const currentPrompt = prompt;
+    const currentUploads = [...uploads];
+    
+    // Force complete reset of PromptBar
+    setPrompt('');
+    setUploads([]);
+    setResetKey(prev => prev + 1); // Force component reset
+    
+    // Force a re-render to ensure UI updates immediately
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    
+    // Scroll to top immediately when send is pressed
     setTimeout(() => {
       const chatContainer = document.querySelector('[data-chat-scroll]');
       if (chatContainer) {
-        chatContainer.scrollTop = chatContainer.scrollHeight;
+        chatContainer.scrollTo({ top: 0, behavior: 'smooth' });
       }
     }, 50);
     
+    // Also try scrolling after a longer delay to ensure content is rendered
+    setTimeout(() => {
+      const chatContainer = document.querySelector('[data-chat-scroll]');
+      if (chatContainer) {
+        chatContainer.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }, 200);
+    
     // if no images, handle text-only chat
-    if (uploads.length === 0) {
-      if (!prompt.trim()) {
+    if (currentUploads.length === 0) {
+      if (!currentPrompt.trim()) {
         setErrorMsg('Type a question or add at least one image.');
         return;
       }
-      sendStart(prompt, uploads);
+      sendStart(currentPrompt, currentUploads);
       try {
         setIsTyping(true);
-        const res = await analyzeBatch(prompt, [], mode);
+        const res = await analyzeBatch(currentPrompt, [], mode);
         const text = res[0]?.answer ?? 'No answer';
         useChatStore.getState().addAssistantText(text);
-        setPrompt('');
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         useChatStore.getState().addAssistantText(`Error: ${msg}`);
@@ -130,9 +163,9 @@ export default function PromptBar() {
     }
 
     // Check if we have pending images and user is responding with text
-    if (pendingImages && prompt.trim() && uploads.length === 0) {
+    if (pendingImages && currentPrompt.trim() && currentUploads.length === 0) {
       // User is responding to the follow-up question with text only
-      sendStart(prompt, pendingImages);
+      sendStart(currentPrompt, pendingImages);
       
       // Process with LLM using pending images + user text
       const assistantId = addAssistantPlaceholder(pendingImages);
@@ -140,9 +173,9 @@ export default function PromptBar() {
       
       try {
         console.log(`🚀 Making 1 API call for ${pendingImages.length} images with follow-up text`);
-        console.log('📤 Sending to backend:', { prompt, imageCount: pendingImages.length });
+        console.log('📤 Sending to backend:', { prompt: currentPrompt, imageCount: pendingImages.length });
         
-        const results = await analyzeBatch(prompt, pendingImages, mode);
+        const results = await analyzeBatch(currentPrompt, pendingImages, mode);
         const elapsed = Math.round(performance.now() - startedAt);
         
         console.log(`✅ Received ${results.length} responses in ${elapsed}ms`);
@@ -172,35 +205,34 @@ export default function PromptBar() {
       
       // Clear pending images after processing
       setPendingImages(null);
-      setPrompt('');
       return;
     }
 
     // Check if only images are sent without text
-    if (!prompt.trim()) {
+    if (!currentPrompt.trim()) {
       // No text provided - ask follow-up question directly
-      sendStart('', uploads);
-      const followUpText = uploads.length === 1 
+      sendStart('', currentUploads);
+      const followUpText = currentUploads.length === 1 
         ? 'How can I help you with this image?' 
         : 'How can I help you with these images?';
       useChatStore.getState().addAssistantText(followUpText);
       
       // Store images for follow-up
-      setPendingImages([...uploads]);
+      setPendingImages([...currentUploads]);
     } else {
       // Text provided - process with LLM
-      sendStart(prompt, uploads);
+      sendStart(currentPrompt, currentUploads);
 
       // optimized single API call for all images
-      const assistantId = addAssistantPlaceholder(uploads);
+      const assistantId = addAssistantPlaceholder(currentUploads);
       const startedAt = performance.now();
       
       try {
         // Send all images in one API call
-        console.log(`🚀 Making 1 API call for ${uploads.length} images`);
-        console.log('📤 Sending to backend:', { prompt, imageCount: uploads.length });
+        console.log(`🚀 Making 1 API call for ${currentUploads.length} images`);
+        console.log('📤 Sending to backend:', { prompt: currentPrompt, imageCount: currentUploads.length });
         
-        const results = await analyzeBatch(prompt, uploads, mode);
+        const results = await analyzeBatch(currentPrompt, currentUploads, mode);
         const elapsed = Math.round(performance.now() - startedAt);
         
         console.log(`✅ Received ${results.length} responses in ${elapsed}ms`);
@@ -219,7 +251,7 @@ export default function PromptBar() {
         const errorMsg = err instanceof Error ? err.message : String(err);
         
         // Mark all cards as error
-        uploads.forEach((_, i) => {
+        currentUploads.forEach((_, i) => {
           patchAssistantCard(assistantId, i, {
             status: 'error',
             text: errorMsg,
@@ -229,9 +261,6 @@ export default function PromptBar() {
       }
     }
 
-    setPrompt('');
-    setUploads([]);
-    
     // Clear the file input after sending
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -240,11 +269,12 @@ export default function PromptBar() {
 
   return (
     <div
+      key={resetKey}
       className={
         "relative rounded-xl shadow-sm p-3 border border-gray-700 transition " +
         (dragActive ? "border-blue-500 ring-2 ring-blue-500 " : "")
       }
-      style={{ backgroundColor: 'var(--bg)' }}
+      style={{ backgroundColor: '#0b1020' }}
       onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(true); }}
       onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'; }}
       onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(false); }}
@@ -300,9 +330,9 @@ export default function PromptBar() {
         <input
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
-          placeholder="How can I help you today?"
+          placeholder={messages.length === 0 ? "How can I help you today?" : "Type a message..."}
           className="w-full rounded-lg px-3 py-2 text-sm outline-none text-white placeholder-gray-400 focus:outline-none resize-none"
-          style={{ backgroundColor: 'var(--bg)' }}
+          style={{ backgroundColor: '#0b1020' }}
           disabled={busy}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
