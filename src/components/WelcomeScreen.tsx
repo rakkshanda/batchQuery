@@ -87,7 +87,7 @@ export default function WelcomeScreen({ onStartChat }: WelcomeScreenProps) {
     setUploads([]);
     
     // Send the message and transition to chat
-    const { sendStart, setUploads: setStoreUploads, mode, setIsTyping, addAssistantPlaceholder, patchAssistantCard, pendingImages, setPendingImages } = useChatStore.getState();
+    const { sendStart, setUploads: setStoreUploads, mode, setIsTyping, addAssistantPlaceholder, patchAssistantCard, setPendingImages } = useChatStore.getState();
     setStoreUploads(currentUploads); // Set uploads in store before transitioning
     onStartChat(); // Transition to chat interface
     
