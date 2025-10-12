@@ -21,10 +21,9 @@ export default function MessageItem({ msg }: { msg: Message }) {
       <div
         className={`relative group max-w-[85%] rounded-2xl p-3 shadow-soft ${
           isUser
-            ? 'text-white border border-black/10 dark:border-white/10'
-            : 'bg-[var(--surface)] text-[var(--text)]'
+            ? 'bg-gray-200 text-gray-900 border border-gray-300 dark:bg-[#0b1020] dark:text-white dark:border-white/10'
+            : 'bg-white text-gray-900 dark:bg-[var(--surface)] dark:text-[var(--text)]'
         }`}
-        style={isUser ? { backgroundColor: '#0b1020' } : {}}
       >
         {/* attachments (for user) */}
         {isUser && msg.attachments?.length > 0 && (

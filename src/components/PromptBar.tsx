@@ -432,7 +432,7 @@ export default function PromptBar() {
               stroke="currentColor"
               className="w-4 h-4"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4l-8 8h16l-8-8z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M7 14l5-5 5 5" />
             </svg>
           </button>
         </div>

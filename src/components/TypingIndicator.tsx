@@ -1,7 +1,7 @@
 export default function TypingIndicator() {
   return (
     <div className="flex justify-start">
-      <div className="bg-[var(--surface)] text-[var(--text)] rounded-2xl p-3 shadow-soft border border-black/10 dark:border-white/10">
+      <div className="bg-[var(--surface)] text-[var(--text)] rounded-2xl p-3 shadow-soft">
         <div className="flex items-center space-x-1">
           <span className="text-sm text-[var(--muted)]">Thinking</span>
           <div className="flex space-x-1">

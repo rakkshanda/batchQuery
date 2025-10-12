@@ -158,14 +158,6 @@ export default function ChatLayout() {
                 LLM {mode === 'live' ? 'On' : 'Off'}
               </button>
               <button
-                onClick={() => setDark((d) => !d)}
-                aria-pressed={dark}
-                title="Toggle dark mode"
-                className="text-sm rounded-md border px-3 py-1 transition bg-gray-700 text-white border-gray-600 hover:bg-gray-600"
-              >
-                Dark Mode {dark ? 'On' : 'Off'}
-              </button>
-              <button
                 onClick={clearChat}
                 className="text-sm rounded-md border px-3 py-1 transition bg-gray-700 text-white border-gray-600 hover:bg-gray-600"
                 disabled={busy}
@@ -216,22 +208,6 @@ export default function ChatLayout() {
                   }`}>
                     <div className={`w-3 h-3 rounded-full bg-gray-800 transition-transform ${
                       mode === 'live' ? 'translate-x-4' : 'translate-x-0.5'
-                    } mt-0.5`}></div>
-                  </div>
-                </button>
-                
-                <button
-                  onClick={() => {
-                    setDark((d) => !d);
-                  }}
-                  className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 transition flex items-center justify-between"
-                >
-                  <span>Dark Mode</span>
-                  <div className={`w-8 h-4 rounded-full transition-colors ${
-                    dark ? 'bg-blue-500' : 'bg-gray-500'
-                  }`}>
-                    <div className={`w-3 h-3 rounded-full bg-white transition-transform ${
-                      dark ? 'translate-x-4' : 'translate-x-0.5'
                     } mt-0.5`}></div>
                   </div>
                 </button>
