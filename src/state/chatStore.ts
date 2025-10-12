@@ -39,6 +39,7 @@ export type Message = UserMessage | AssistantBatchMessage | AssistantTextMessage
 type Store = {
   messages: Message[];
   uploads: UploadFile[];
+  pendingImages: UploadFile[] | null; // Images waiting for follow-up text
   mode: 'mock' | 'live';
   busy: boolean;
   isTyping: boolean;
@@ -49,6 +50,7 @@ type Store = {
   clearUploads: () => void;
   clearChat: () => void;
   setIsTyping: (typing: boolean) => void;
+  setPendingImages: (images: UploadFile[] | null) => void;
 
   sendStart: (prompt: string, files: UploadFile[]) => string;
   addAssistantPlaceholder: (files: UploadFile[]) => string;
@@ -63,6 +65,7 @@ const id = () => Math.random().toString(36).slice(2);
 export const useChatStore = create<Store>((set, _get) => ({
   messages: [],
   uploads: [],
+  pendingImages: null,
   mode: 'live',
   busy: false,
   isTyping: false,
@@ -77,8 +80,9 @@ export const useChatStore = create<Store>((set, _get) => ({
       uploads: s.uploads.filter((_, i) => i !== index),
     })),
   clearUploads: () => set({ uploads: [] }),
-  clearChat: () => set({ messages: [] }),
+  clearChat: () => set({ messages: [], pendingImages: null }),
   setIsTyping: (typing) => set({ isTyping: typing }),
+  setPendingImages: (images) => set({ pendingImages: images }),
 
   sendStart: (prompt, files) => {
     const userMsg: UserMessage = {

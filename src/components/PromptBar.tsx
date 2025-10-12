@@ -5,7 +5,7 @@ import { validateFiles } from '../lib/validators';
 import { analyzeBatch } from '../lib/api';
 
 export default function PromptBar() {
-  const { uploads, setUploads, removeUpload, sendStart, addAssistantPlaceholder, patchAssistantCard, busy, mode, setIsTyping } =
+  const { uploads, setUploads, removeUpload, sendStart, addAssistantPlaceholder, patchAssistantCard, busy, mode, setIsTyping, pendingImages, setPendingImages } =
     useChatStore();
   const [prompt, setPrompt] = useState('');
   const [dragActive, setDragActive] = useState(false);
@@ -52,6 +52,11 @@ export default function PromptBar() {
     }
     setErrorMsg('');
     setUploads(merged);
+    
+    // Clear the file input so it can be used again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
 
@@ -124,57 +129,122 @@ export default function PromptBar() {
       return;
     }
 
-    // for images, use optimized single API call
-    sendStart(prompt, uploads);
+    // Check if we have pending images and user is responding with text
+    if (pendingImages && prompt.trim() && uploads.length === 0) {
+      // User is responding to the follow-up question with text only
+      sendStart(prompt, pendingImages);
+      
+      // Process with LLM using pending images + user text
+      const assistantId = addAssistantPlaceholder(pendingImages);
+      const startedAt = performance.now();
+      
+      try {
+        console.log(`🚀 Making 1 API call for ${pendingImages.length} images with follow-up text`);
+        console.log('📤 Sending to backend:', { prompt, imageCount: pendingImages.length });
+        
+        const results = await analyzeBatch(prompt, pendingImages, mode);
+        const elapsed = Math.round(performance.now() - startedAt);
+        
+        console.log(`✅ Received ${results.length} responses in ${elapsed}ms`);
+        console.log('📥 Results:', results);
+        
+        // Update each card with its corresponding result
+        results.forEach((result, i) => {
+          patchAssistantCard(assistantId, i, {
+            status: 'done',
+            text: result.answer,
+            elapsedMs: elapsed
+          });
+        });
+      } catch (err) {
+        const elapsed = Math.round(performance.now() - startedAt);
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        
+        // Mark all cards as error
+        pendingImages.forEach((_, i) => {
+          patchAssistantCard(assistantId, i, {
+            status: 'error',
+            text: errorMsg,
+            elapsedMs: elapsed,
+          });
+        });
+      }
+      
+      // Clear pending images after processing
+      setPendingImages(null);
+      setPrompt('');
+      return;
+    }
 
-    // optimized single API call for all images
-    const assistantId = addAssistantPlaceholder(uploads);
-    const startedAt = performance.now();
-    const promptToUse = (prompt && prompt.trim()) || 'Provide a concise, checklist-style quality check for this product image (defects, guideline issues, presentation problems).';
-    
-    try {
-      // Send all images in one API call
-      console.log(`🚀 Making 1 API call for ${uploads.length} images`);
-      console.log('📤 Sending to backend:', { prompt: promptToUse, imageCount: uploads.length });
+    // Check if only images are sent without text
+    if (!prompt.trim()) {
+      // No text provided - ask follow-up question directly
+      sendStart('', uploads);
+      const followUpText = uploads.length === 1 
+        ? 'How can I help you with this image?' 
+        : 'How can I help you with these images?';
+      useChatStore.getState().addAssistantText(followUpText);
       
-      const results = await analyzeBatch(promptToUse, uploads, mode);
-      const elapsed = Math.round(performance.now() - startedAt);
+      // Store images for follow-up
+      setPendingImages([...uploads]);
+    } else {
+      // Text provided - process with LLM
+      sendStart(prompt, uploads);
+
+      // optimized single API call for all images
+      const assistantId = addAssistantPlaceholder(uploads);
+      const startedAt = performance.now();
       
-      console.log(`✅ Received ${results.length} responses in ${elapsed}ms`);
-      console.log('📥 Results:', results);
-      
-      // Update each card with its corresponding result
-      results.forEach((result, i) => {
-        patchAssistantCard(assistantId, i, { 
-          status: 'done', 
-          text: result.answer, 
-          elapsedMs: elapsed 
+      try {
+        // Send all images in one API call
+        console.log(`🚀 Making 1 API call for ${uploads.length} images`);
+        console.log('📤 Sending to backend:', { prompt, imageCount: uploads.length });
+        
+        const results = await analyzeBatch(prompt, uploads, mode);
+        const elapsed = Math.round(performance.now() - startedAt);
+        
+        console.log(`✅ Received ${results.length} responses in ${elapsed}ms`);
+        console.log('📥 Results:', results);
+        
+        // Update each card with its corresponding result
+        results.forEach((result, i) => {
+          patchAssistantCard(assistantId, i, {
+            status: 'done',
+            text: result.answer,
+            elapsedMs: elapsed
+          });
         });
-      });
-    } catch (err) {
-      const elapsed = Math.round(performance.now() - startedAt);
-      const errorMsg = err instanceof Error ? err.message : String(err);
-      
-      // Mark all cards as error
-      uploads.forEach((_, i) => {
-        patchAssistantCard(assistantId, i, {
-          status: 'error',
-          text: errorMsg,
-          elapsedMs: elapsed,
+      } catch (err) {
+        const elapsed = Math.round(performance.now() - startedAt);
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        
+        // Mark all cards as error
+        uploads.forEach((_, i) => {
+          patchAssistantCard(assistantId, i, {
+            status: 'error',
+            text: errorMsg,
+            elapsedMs: elapsed,
+          });
         });
-      });
+      }
     }
 
     setPrompt('');
     setUploads([]);
+    
+    // Clear the file input after sending
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   return (
     <div
       className={
-        "relative rounded-xl bg-[var(--surface)] shadow-sm p-3 border-2 transition " +
-        (dragActive ? "border-blue-500 ring-2 ring-blue-500 dark:border-blue-400 " : "border-blue-300 dark:border-blue-400")
+        "relative rounded-xl shadow-sm p-3 border border-gray-700 transition " +
+        (dragActive ? "border-blue-500 ring-2 ring-blue-500 " : "")
       }
+      style={{ backgroundColor: 'var(--bg)' }}
       onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(true); }}
       onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'; }}
       onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(false); }}
@@ -225,31 +295,14 @@ export default function PromptBar() {
         </div>
       )}
 
-      {/* composer row */}
-      <div className="flex items-center gap-3 px-2">
-        <button
-          onClick={onPickFiles}
-          className={`group rounded-full p-2 transition flex items-center justify-center
-            bg-[var(--text)] text-[var(--bg)]
-            hover:opacity-90 enabled:group-hover:translate-x-0.5
-            disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:text-gray-200 disabled:opacity-70 disabled:pointer-events-none`}
-          disabled={busy}
-        >
-          <span className="transition-transform duration-150 group-hover:rotate-90">+</span>
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/png,image/jpeg,image/webp"
-          multiple
-          hidden
-          onChange={(e) => onFilesChosen(e.target.files)}
-        />
+      {/* Text Area */}
+      <div className="mb-3 px-2">
         <input
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
-          placeholder="Ask anything…"
-          className="flex-1 rounded-lg border px-3 py-2 text-sm outline-none bg-[var(--surface)] text-[var(--text)] placeholder-[var(--muted)] border-gray-200 dark:border-white/10 focus:border-gray-300 dark:focus:border-white/20 focus:ring-1 focus:ring-gray-200 dark:focus:ring-white/10"
+          placeholder="How can I help you today?"
+          className="w-full rounded-lg px-3 py-2 text-sm outline-none text-white placeholder-gray-400 focus:outline-none resize-none"
+          style={{ backgroundColor: 'var(--bg)' }}
           disabled={busy}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -258,26 +311,106 @@ export default function PromptBar() {
             }
           }}
         />
-        <button
-          onClick={onSend}
-          disabled={busy || (!prompt.trim() && uploads.length === 0)}
-          className={`group rounded-full p-2 transition flex items-center justify-center
-            bg-[var(--text)] text-[var(--bg)]
-            hover:opacity-90 enabled:group-hover:translate-x-0.5
-            disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:text-gray-200 disabled:opacity-70 disabled:pointer-events-none`}
-          aria-label="Send message"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={2}
-            stroke="currentColor"
-            className="w-5 h-5 transform transition-transform duration-150 group-enabled:group-hover:translate-x-0.5"
+      </div>
+      
+      {/* Bottom Controls Row */}
+      <div className="flex items-center justify-between px-2">
+        {/* Left Buttons */}
+        <div className="flex gap-2">
+          <button
+            onClick={onPickFiles}
+            className={`group rounded-lg p-2 transition flex items-center justify-center
+              bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white
+              disabled:opacity-50 disabled:pointer-events-none`}
+            disabled={busy}
+                  title="Upload image"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14m-7-7l7 7-7 7" />
-          </svg>
-        </button>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={2}
+              stroke="currentColor"
+              className="w-4 h-4"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+          </button>
+          
+          <button
+            onClick={() => console.log('Microphone clicked')}
+            className={`group rounded-lg p-2 transition flex items-center justify-center
+              bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white
+              disabled:opacity-50 disabled:pointer-events-none`}
+            disabled={busy}
+            title="Voice input"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={2}
+              stroke="currentColor"
+              className="w-4 h-4"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8" />
+            </svg>
+          </button>
+          
+          <button
+            onClick={() => console.log('History clicked')}
+            className={`group rounded-lg p-2 transition flex items-center justify-center
+              bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white
+              disabled:opacity-50 disabled:pointer-events-none`}
+            disabled={busy}
+            title="History"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={2}
+              stroke="currentColor"
+              className="w-4 h-4"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </button>
+        </div>
+        
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          multiple
+          hidden
+          onChange={(e) => onFilesChosen(e.target.files)}
+        />
+        
+        {/* Right Elements */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onSend}
+            disabled={busy || (!prompt.trim() && uploads.length === 0)}
+            className={`group rounded-lg p-2 transition flex items-center justify-center
+              text-white hover:opacity-90
+              disabled:bg-gray-600 disabled:text-gray-400 disabled:opacity-70 disabled:pointer-events-none`}
+            style={{ backgroundColor: '#089669' }}
+            aria-label="Send message"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={2}
+              stroke="currentColor"
+              className="w-4 h-4"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4l-8 8h16l-8-8z" />
+            </svg>
+          </button>
+        </div>
       </div>
       {errorMsg && (
         <div className="px-2 pt-2 text-xs text-rose-600 dark:text-rose-400">
