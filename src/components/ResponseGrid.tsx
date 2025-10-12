@@ -25,13 +25,11 @@ export default function ResponseGrid({ cards }: { cards: AssistantCard[] }) {
       {cards.map((c, i) => (
         <div 
           key={i} 
-          className={`rounded-xl border border-black/10 p-2 transition-all duration-200 relative ${
-            cards.length > 1 ? 'cursor-pointer' : ''
-          } ${
-            hoveredCard === i && cards.length > 1 ? 'border-[#089669] shadow-lg transform scale-105' : 'hover:border-gray-300'
+          className={`rounded-xl border border-black/10 p-2 transition-all duration-200 relative cursor-pointer ${
+            hoveredCard === i ? 'border-[#089669] shadow-lg transform scale-105' : 'hover:border-gray-300'
           }`}
-          onMouseEnter={() => cards.length > 1 && setHoveredCard(i)}
-          onMouseLeave={() => cards.length > 1 && setHoveredCard(null)}
+          onMouseEnter={() => setHoveredCard(i)}
+          onMouseLeave={() => setHoveredCard(null)}
         >
           <div className="relative">
             <img
@@ -40,8 +38,8 @@ export default function ResponseGrid({ cards }: { cards: AssistantCard[] }) {
               className="w-full h-24 object-cover rounded-lg border border-black/10"
             />
             
-            {/* Floating Ask button - only show on hover and when there are multiple images */}
-            {hoveredCard === i && c.status === 'done' && cards.length > 1 && (
+            {/* Floating Ask button - show on hover for all images */}
+            {hoveredCard === i && c.status === 'done' && (
               <button
                 onClick={() => handleAskAboutImage(c)}
                 className="absolute top-2 right-2 w-8 h-8 text-white rounded-full flex items-center justify-center hover:opacity-90 transition-colors shadow-lg"

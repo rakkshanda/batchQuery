@@ -17,7 +17,7 @@ export default function MessageItem({ msg }: { msg: Message }) {
   const [saving, setSaving] = useState(false);
   const [editText, setEditText] = useState(messageText);
   return (
-    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+    <div className={`message-item flex ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div
         className={`relative group max-w-[85%] rounded-2xl p-3 shadow-soft ${
           isUser

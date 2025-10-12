@@ -127,21 +127,16 @@ export default function PromptBar() {
     // Force a re-render to ensure UI updates immediately
     await new Promise(resolve => requestAnimationFrame(resolve));
     
-    // Scroll to top immediately when send is pressed
+    // Scroll newest message into view (top-aligned) when send is pressed
     setTimeout(() => {
       const chatContainer = document.querySelector('[data-chat-scroll]');
       if (chatContainer) {
-        chatContainer.scrollTo({ top: 0, behavior: 'smooth' });
+        const lastMessage = chatContainer.querySelector('.message-item:last-child') as HTMLElement | null;
+        if (lastMessage) {
+          lastMessage.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
       }
-    }, 50);
-    
-    // Also try scrolling after a longer delay to ensure content is rendered
-    setTimeout(() => {
-      const chatContainer = document.querySelector('[data-chat-scroll]');
-      if (chatContainer) {
-        chatContainer.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-    }, 200);
+    }, 100);
     
     // if no images, handle text-only chat
     if (currentUploads.length === 0) {

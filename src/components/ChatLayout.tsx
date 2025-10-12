@@ -55,22 +55,15 @@ export default function ChatLayout() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showSettingsDropdown]);
 
-  // autoscroll to top when messages change or typing state changes
+  // Scroll newest message into view (top-aligned)
   useEffect(() => {
     const el = scrollerRef.current;
     if (!el) return;
-    
-    const scrollToTop = () => {
-      // Scroll to the very top
-      el.scrollTo({ top: 0, behavior: 'smooth' });
-    };
-    
-    // Use requestAnimationFrame to ensure DOM has updated
-    requestAnimationFrame(scrollToTop);
-    
-    // Also try after a short delay to ensure content is rendered
-    setTimeout(scrollToTop, 100);
-  }, [messages.length, isTyping]);
+    const last = el.querySelector('.message-item:last-child') as HTMLElement | null;
+    if (last) {
+      last.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [messages.length]);
 
   useEffect(() => {
     function onDragEnter(e: DragEvent) {
