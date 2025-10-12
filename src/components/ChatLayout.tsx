@@ -6,10 +6,10 @@ import { useChatStore } from '../state/chatStore';
 import { validateFiles } from '../lib/validators';
 
 export default function ChatLayout() {
-  const { messages, clearChat, mode, setMode, busy, uploads, setUploads, isTyping } = useChatStore();
+  const { messages, clearChat, mode, setMode, busy, uploads, setUploads } = useChatStore();
   const scrollerRef = useRef<HTMLDivElement>(null);
 
-  const [dark, setDark] = useState(() => {
+  const [dark] = useState(() => {
     if (typeof window === 'undefined') return false;
     try {
       const saved = localStorage.getItem('theme');
