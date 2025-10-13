@@ -246,8 +246,10 @@ export default function WelcomeScreen({ onStartChat }: WelcomeScreenProps) {
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   className="group rounded-lg p-2 transition flex items-center justify-center
-                    bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white"
-                  title="Upload image"
+                    bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white
+                    disabled:opacity-50 disabled:pointer-events-none"
+                  disabled={uploads.length >= 4}
+                  title={uploads.length >= 4 ? "Maximum 4 images allowed" : "Upload image"}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
